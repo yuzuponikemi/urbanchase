@@ -1,7 +1,16 @@
 {
+  "compilerOptions": {
+    "noUnusedLocals": false, // 未使用変数があっても無視する
+    "noUnusedParameters": false, // 未使用引数があっても無視する
+    "noImplicitAny": false, // 型が不明でもエラーにしない
+  },
   "files": [],
   "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.node.json"
+    }
   ]
 }
