@@ -3,11 +3,12 @@
  */
 
 import { createContext, useContext, useReducer } from "react";
-import type { GameState, GameContextType } from "./types";
+import type { GameState, GameContextType, Helicopter, TraceMarker } from "./types";
 import {
   canCriminalMove,
   executeCriminalMove,
   canMoveHelicopter,
+  executeHelicopterMove,
   searchAdjacentBuilding,
   checkWinCondition,
 } from "./gameRules";
@@ -52,21 +53,21 @@ function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "PLACE_HELICOPTER": {
       if (!isValidIntersectionPos(action.x, action.y)) return state;
-      
+
       // 他のヘリが既にそこにいないかチェック（自分自身は除く）
       const isOccupied = state.police.helicopters.some(
         (h) => h.id !== action.heliId && h.location.x === action.x && h.location.y === action.y
       );
       if (isOccupied) return state;
 
-      const newHelicopters = state.police.helicopters.map((h) => 
+      const newHelicopters = state.police.helicopters.map((h) =>
         h.id === action.heliId ? { ...h, location: { x: action.x, y: action.y } } : h
       );
-      
+
       const allPlaced = newHelicopters.every(
         (h) => h.location.x >= 0 && h.location.y >= 0
       );
-      
+
       return {
         ...state,
         phase: allPlaced ? "setup_criminal_building" : state.phase,
@@ -115,7 +116,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.phase !== "playing" || state.currentPlayer !== "police") {
         return state;
       }
-      
+
       // 他のヘリが既にそこにいないかチェック
       const isOccupied = state.police.helicopters.some(
         (h) => h.id !== action.heliId && h.location.x === action.x && h.location.y === action.y
@@ -144,9 +145,16 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       const heli = state.police.helicopters.find((h) => h.id === action.heliId);
       if (!heli) return state;
       const result = searchAdjacentBuilding(heli.location.x, heli.location.y, action.bx, action.by, state);
-      
+
+      const newTraceMarkers = state.traceMarkers.map(m =>
+        (m.location.x === action.bx && m.location.y === action.by && (result === "found" || result === "trace"))
+          ? { ...m, isRevealed: true }
+          : m
+      );
+
       return {
         ...state,
+        traceMarkers: newTraceMarkers,
         police: {
           ...state.police,
           lastSearchResult: result,
@@ -177,10 +185,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "NEXT_TURN": {
       if (state.phase !== "playing") return state;
-      
+
       let nextPlayer = state.currentPlayer === "criminal" ? "police" : "criminal";
       let nextRound = state.currentPlayer === "police" ? state.round + 1 : state.round;
-      
+
       const newState: GameState = {
         ...state,
         currentPlayer: nextPlayer as "criminal" | "police",

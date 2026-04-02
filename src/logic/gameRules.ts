@@ -2,7 +2,7 @@
  * Game Rules Implementation
  */
 
-import type { GameState, TraceMarker, SearchResult } from "./types";
+import type { GameState, TraceMarker, SearchResult, Helicopter } from "./types";
 import {
   isAdjacentBuilding,
   isAdjacentIntersection,
@@ -25,12 +25,10 @@ export function canCriminalMove(
     return false;
   }
 
-  // 前ラウンドの痕跡位置には移動不可
-  if (state.round > 1) {
-    const prevTrace = state.traceMarkers.find((m) => m.round === state.round - 1);
-    if (prevTrace && prevTrace.location.x === to.x && prevTrace.location.y === to.y) {
-      return false;
-    }
+  // 痕跡位置（訪れたことのある場所）には移動不可
+  const hasTrace = state.traceMarkers.some((m) => m.location.x === to.x && m.location.y === to.y);
+  if (hasTrace) {
+    return false;
   }
 
   return true;
@@ -40,11 +38,13 @@ export function canCriminalMove(
  * 容疑者が移動を実行
  */
 export function executeCriminalMove(newPos: { x: number; y: number }, state: GameState): GameState {
-  const color = state.round === 1 || state.round === 6 ? "special" : "normal";
+  const isSpecial = state.round === 1 || state.round === 6;
+  const color = isSpecial ? "special" : "normal";
   const newTrace: TraceMarker = {
     round: state.round,
     location: { ...newPos },
     color,
+    isRevealed: isSpecial,
   };
 
   return {

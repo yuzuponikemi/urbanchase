@@ -79,8 +79,8 @@ export const Board: React.FC<BoardProps> = ({ state, onBuildingClick, onIntersec
         const isAdjacentToCriminal =
           state.currentPlayer === "criminal" &&
           Math.abs(i - state.criminal.currentLocation.x) +
-            Math.abs(j - state.criminal.currentLocation.y) ===
-            1;
+          Math.abs(j - state.criminal.currentLocation.y) ===
+          1;
 
         if (isAdjacentToCriminal) {
           ctx.fillStyle = "#dbeafe";
@@ -92,9 +92,11 @@ export const Board: React.FC<BoardProps> = ({ state, onBuildingClick, onIntersec
         // 痕跡マーカー
         const trace = state.traceMarkers.find((m) => m.location.x === i && m.location.y === j);
         if (trace) {
-          // 容疑者ターンのみ表示
-          const shouldShowTrace = state.currentPlayer === "criminal";
-          
+          // 表示条件: 
+          // 1. 容疑者自身にはすべての痕跡が見える
+          // 2. 発見済み (isRevealed) の痕跡は全員に見える
+          const shouldShowTrace = state.currentPlayer === "criminal" || trace.isRevealed;
+
           if (shouldShowTrace) {
             ctx.fillStyle = trace.color === "special" ? "#fbbf24" : "#e5e7eb";
             ctx.fillRect(x + cellSize * 0.2, y + cellSize * 0.2, cellSize * 0.6, cellSize * 0.6);
@@ -109,9 +111,9 @@ export const Board: React.FC<BoardProps> = ({ state, onBuildingClick, onIntersec
           // 2. セットアップ中 (setup_criminal_building)
           // 3. 警察に見つかった時 (isDiscovered)
           // 4. ゲームオーバーの時
-          const shouldShowCriminal = 
-            state.currentPlayer === "criminal" || 
-            state.phase === "setup_criminal_building" || 
+          const shouldShowCriminal =
+            state.currentPlayer === "criminal" ||
+            state.phase === "setup_criminal_building" ||
             state.criminal.isDiscovered ||
             state.phase === "gameover";
 

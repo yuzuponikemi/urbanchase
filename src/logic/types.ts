@@ -45,6 +45,7 @@ export interface TraceMarker {
   round: number; // 1-11
   location: { x: number; y: number }; // 建物座標(5x5)
   color: "normal" | "special"; // round=1 or round=6 は "special"
+  isRevealed: boolean; // 警察に見つかった、または特殊ラウンド
 }
 
 // 検索結果
