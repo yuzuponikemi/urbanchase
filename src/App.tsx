@@ -2,7 +2,6 @@
  * City Chase - Main App Component
  */
 
-import React from "react";
 import { GameContext, useGameProvider } from "./logic/gameState";
 import { SetupPhase } from "./components/SetupPhase";
 import { GameStatus } from "./components/GameStatus";

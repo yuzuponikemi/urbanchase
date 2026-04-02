@@ -2,7 +2,7 @@
  * Game Rules Implementation
  */
 
-import type { GameState, TraceMarker, SearchResult, Helicopter } from "./types";
+import type { GameState, TraceMarker, SearchResult } from "./types";
 import {
   isAdjacentBuilding,
   isAdjacentIntersection,

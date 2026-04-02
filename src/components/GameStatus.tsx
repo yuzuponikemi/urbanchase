@@ -11,7 +11,7 @@ interface GameStatusProps {
   context: GameContextType;
 }
 
-export const GameStatus: React.FC<GameStatusProps> = ({ state, context }) => {
+export const GameStatus: React.FC<GameStatusProps> = ({ state }) => {
   const specialTraces = state.traceMarkers.filter((m) => m.color === "special");
   const allTraces = state.traceMarkers.length;
 
@@ -87,13 +87,13 @@ export const GameStatus: React.FC<GameStatusProps> = ({ state, context }) => {
                 className={`text-base font-bold ${
                   state.police.lastSearchResult === "found"
                     ? "text-red-600"
-                    : state.police.lastSearchResult === "empty"
+                    : state.police.lastSearchResult === "trace"
                     ? "text-yellow-600"
                     : "text-gray-600"
                 }`}
               >
                 {state.police.lastSearchResult === "found" && "🎯 容疑者を発見！"}
-                {state.police.lastSearchResult === "empty" && "⚠️ 痕跡がありますが容疑者はいません"}
+                {state.police.lastSearchResult === "trace" && "⚠️ 痕跡がありますが容疑者はいません"}
                 {state.police.lastSearchResult === "no_building" && "❌ 隣接していない建物です"}
               </div>
             </div>
