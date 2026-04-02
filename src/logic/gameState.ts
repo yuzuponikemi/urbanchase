@@ -3,12 +3,11 @@
  */
 
 import { createContext, useContext, useReducer } from "react";
-import type { GameState, GameContextType, Helicopter, TraceMarker } from "./types";
+import type { GameState, GameContextType } from "./types";
 import {
   canCriminalMove,
   executeCriminalMove,
   canMoveHelicopter,
-  executeHelicopterMove,
   searchAdjacentBuilding,
   checkWinCondition,
 } from "./gameRules";
