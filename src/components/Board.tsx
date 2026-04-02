@@ -14,6 +14,7 @@ import {
 
 interface BoardProps {
   state: GameState;
+  selectedHeliId?: 1 | 2 | 3 | null;
   onBuildingClick: (x: number, y: number) => void;
   onIntersectionClick: (x: number, y: number) => void;
 }
@@ -23,7 +24,7 @@ const PADDING = 40;
 const CANVAS_WIDTH = BOARD_WIDTH * CELL_SIZE + PADDING * 2;
 const CANVAS_HEIGHT = BOARD_HEIGHT * CELL_SIZE + PADDING * 2;
 
-export const Board: React.FC<BoardProps> = ({ state, onBuildingClick, onIntersectionClick }) => {
+export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, onBuildingClick, onIntersectionClick }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [canvasSize, setCanvasSize] = React.useState({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT });
 
@@ -152,6 +153,21 @@ export const Board: React.FC<BoardProps> = ({ state, onBuildingClick, onIntersec
       const x = padding + cellSize * (heli.location.x + 1);
       const y = padding + cellSize * (heli.location.y + 1);
 
+      const isActed = state.police.actedHeliIds.includes(heli.id);
+      const isSelected = selectedHeliId === heli.id;
+
+      // 行動済みは半透明に
+      ctx.globalAlpha = isActed ? 0.4 : 1.0;
+      
+      // 選択中を強調
+      if (isSelected) {
+        ctx.strokeStyle = "#fbbf24"; // ゴールド
+        ctx.lineWidth = 4 * scale;
+        ctx.beginPath();
+        ctx.arc(x, y, 16 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
       ctx.fillStyle = heliColors[heli.color] || "#6b7280";
       ctx.beginPath();
       ctx.arc(x, y, 12 * scale, 0, Math.PI * 2);
@@ -163,6 +179,8 @@ export const Board: React.FC<BoardProps> = ({ state, onBuildingClick, onIntersec
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(String(heli.id), x, y);
+      
+      ctx.globalAlpha = 1.0;
     }
   };
 

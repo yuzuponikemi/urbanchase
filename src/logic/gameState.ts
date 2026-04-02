@@ -31,6 +31,7 @@ const initialGameState: GameState = {
       { id: 3, color: "green", location: { x: -1, y: -1 } },
     ],
     lastSearchResult: null,
+    actedHeliIds: [],
   },
   traceMarkers: [],
   isTurnTransition: false,
@@ -45,6 +46,7 @@ type GameAction =
   | { type: "MOVE_HELICOPTER"; heliId: 1 | 2 | 3; x: number; y: number }
   | { type: "SEARCH_BUILDING"; heliId: 1 | 2 | 3; bx: number; by: number }
   | { type: "CLEAR_SEARCH_RESULT" }
+  | { type: "COMPLETE_HELI_ACTION"; heliId: 1 | 2 | 3 }
   | { type: "START_TURN" }
   | { type: "NEXT_TURN" }
   | { type: "RESET_GAME" };
@@ -176,6 +178,17 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
+    case "COMPLETE_HELI_ACTION": {
+      if (state.police.actedHeliIds.includes(action.heliId)) return state;
+      return {
+        ...state,
+        police: {
+          ...state.police,
+          actedHeliIds: [...state.police.actedHeliIds, action.heliId],
+        },
+      };
+    }
+
     case "START_TURN": {
       return {
         ...state,
@@ -197,6 +210,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         police: {
           ...state.police,
           lastSearchResult: null,
+          actedHeliIds: [],
         },
       };
 
@@ -274,6 +288,10 @@ export function useGameProvider() {
 
     clearSearchResult: () => {
       dispatch({ type: "CLEAR_SEARCH_RESULT" });
+    },
+
+    completeHeliAction: (heliId) => {
+      dispatch({ type: "COMPLETE_HELI_ACTION", heliId });
     },
 
     startTurn: () => {

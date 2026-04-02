@@ -6,7 +6,6 @@
 import React, { useState } from "react";
 import type { GameState, GameContextType } from "../logic/types";
 import { Board } from "./Board";
-import { getAdjacentIntersections, getAdjacentBuildings } from "../logic/boardGeometry";
 
 interface PoliceActionProps {
   state: GameState;
@@ -14,10 +13,10 @@ interface PoliceActionProps {
 }
 
 export const PoliceAction: React.FC<PoliceActionProps> = ({ state, context }) => {
-  const [currentHeliIndex, setCurrentHeliIndex] = useState(0);
+  const [selectedHeliId, setSelectedHeliId] = useState<1 | 2 | 3 | null>(null);
   const [actionMode, setActionMode] = useState<"move" | "search" | null>(null);
 
-  const currentHeli = state.police.helicopters[currentHeliIndex];
+  const selectedHeli = state.police.helicopters.find((h) => h.id === selectedHeliId);
   const heliColors: Record<string, string> = {
     red: "赤",
     blue: "青",
@@ -25,33 +24,46 @@ export const PoliceAction: React.FC<PoliceActionProps> = ({ state, context }) =>
   };
 
   const handleBuildingClick = (x: number, y: number) => {
-    if (actionMode === "search") {
-      context.searchAdjacentBuilding(currentHeli.id, x, y);
+    if (actionMode === "search" && selectedHeliId) {
+      context.searchAdjacentBuilding(selectedHeliId, x, y);
     }
   };
 
   const handleIntersectionClick = (x: number, y: number) => {
-    if (actionMode === "move") {
-      context.moveHelicopter(currentHeli.id, x, y);
-      completeHeliAction();
+    // 既にそこにいるヘリを選択
+    const clickedHeli = state.police.helicopters.find(
+      (h) => h.location.x === x && h.location.y === y
+    );
+
+    if (clickedHeli) {
+      if (state.police.actedHeliIds.includes(clickedHeli.id)) {
+        // 行動済み
+        return;
+      }
+      setSelectedHeliId(clickedHeli.id);
+      setActionMode(null);
+      context.clearSearchResult();
+      return;
+    }
+
+    if (actionMode === "move" && selectedHeliId) {
+      const moved = context.moveHelicopter(selectedHeliId, x, y);
+      if (moved) {
+        completeHeliAction();
+      }
     }
   };
 
   const completeHeliAction = () => {
-    if (currentHeliIndex < 2) {
-      setCurrentHeliIndex(currentHeliIndex + 1);
+    if (selectedHeliId) {
+      context.completeHeliAction(selectedHeliId);
+      setSelectedHeliId(null);
       setActionMode(null);
       context.clearSearchResult();
-    } else {
-      // すべてのヘリが行動完了
-      context.nextTurn();
-      setCurrentHeliIndex(0);
-      setActionMode(null);
     }
   };
 
-  const adjacentIntersections = getAdjacentIntersections(currentHeli.location.x, currentHeli.location.y);
-  const adjacentBuildings = getAdjacentBuildings(currentHeli.location.x, currentHeli.location.y);
+  const allActed = state.police.actedHeliIds.length === 3;
 
   return (
     <div className="w-full">
@@ -59,20 +71,56 @@ export const PoliceAction: React.FC<PoliceActionProps> = ({ state, context }) =>
         <h2 className="text-2xl md:text-3xl font-bold text-blue-600 mb-2">
           ラウンド {state.round} - 警察のターン
         </h2>
-        <p className="text-gray-600 text-lg">
-          ヘリ {currentHeliIndex + 1} ({heliColors[currentHeli.color]})を操作してください
-        </p>
-        <div className="mt-2 text-sm text-gray-500">
-          現在地: 交差点 ({currentHeli.location.x}, {currentHeli.location.y})
-        </div>
+        {!allActed ? (
+          <p className="text-gray-600 text-lg">
+            操作するヘリを選択してください
+          </p>
+        ) : (
+          <p className="text-green-600 font-bold text-lg">
+            すべてのヘリが行動を完了しました
+          </p>
+        )}
+      </div>
+
+      {/* ヘリ選択 UI */}
+      <div className="flex justify-center gap-4 mb-6">
+        {state.police.helicopters.map((heli) => {
+          const isActed = state.police.actedHeliIds.includes(heli.id);
+          const isSelected = selectedHeliId === heli.id;
+          const bgColors: Record<string, string> = {
+            red: isActed ? "bg-red-200" : isSelected ? "bg-red-600" : "bg-red-500",
+            blue: isActed ? "bg-blue-200" : isSelected ? "bg-blue-600" : "bg-blue-500",
+            green: isActed ? "bg-green-200" : isSelected ? "bg-green-600" : "bg-green-500",
+          };
+
+          return (
+            <button
+              key={heli.id}
+              disabled={isActed}
+              onClick={() => {
+                setSelectedHeliId(heli.id);
+                setActionMode(null);
+                context.clearSearchResult();
+              }}
+              className={`px-4 py-2 rounded-full text-white font-bold transition-all shadow-md ${
+                bgColors[heli.color]
+              } ${isActed ? "opacity-50 cursor-not-allowed" : "hover:scale-105"} ${
+                isSelected ? "ring-4 ring-yellow-400" : ""
+              }`}
+            >
+              {heliColors[heli.color]} ({heli.id})
+              {isActed && " ✓"}
+            </button>
+          );
+        })}
       </div>
 
       {/* アクション選択 */}
-      {!actionMode && (
+      {selectedHeli && !actionMode && (
         <div className="bg-blue-50 rounded-lg p-4 md:p-6 mb-6">
           <div className="text-center mb-4">
             <p className="text-gray-700 font-semibold mb-4">
-              {heliColors[currentHeli.color]}のヘリでどのアクションを実行しますか？
+              {heliColors[selectedHeli.color]}のヘリでどのアクションを実行しますか？
             </p>
             <div className="flex flex-col md:flex-row gap-4 justify-center">
               <button
@@ -99,26 +147,20 @@ export const PoliceAction: React.FC<PoliceActionProps> = ({ state, context }) =>
       )}
 
       {/* 移動モード */}
-      {actionMode === "move" && (
+      {actionMode === "move" && selectedHeli && (
         <div className="bg-blue-100 rounded-lg p-4 mb-6 text-center">
           <p className="text-blue-900 font-semibold">
-            隣接する交差点に移動してください（上下左右のいずれか）
+            隣接する交差点に移動してください
           </p>
-          <div className="text-xs text-blue-700 mt-2">
-            隣接交差点: {adjacentIntersections.map((i) => `(${i.x},${i.y})`).join(", ")}
-          </div>
         </div>
       )}
 
       {/* 検索モード */}
-      {actionMode === "search" && (
+      {actionMode === "search" && selectedHeli && (
         <div className="bg-yellow-100 rounded-lg p-4 mb-6 text-center">
           <p className="text-yellow-900 font-semibold">
             隣接する建物を検索してください
           </p>
-          <div className="text-xs text-yellow-700 mt-2">
-            隣接建物: {adjacentBuildings.map((b) => `(${b.x},${b.y})`).join(", ")}
-          </div>
           {state.police.lastSearchResult && (
             <div className="mt-4">
               <div className="text-sm font-bold text-gray-800">検索結果:</div>
@@ -142,38 +184,32 @@ export const PoliceAction: React.FC<PoliceActionProps> = ({ state, context }) =>
                 onClick={() => completeHeliAction()}
                 className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors"
               >
-                次のヘリ
+                アクション完了
               </button>
             </div>
           )}
         </div>
       )}
 
+      {/* ターン終了ボタン */}
+      {allActed && (
+        <div className="text-center mb-6">
+          <button
+            onClick={() => context.nextTurn()}
+            className="px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all shadow-xl scale-110"
+          >
+            警察のターンを終了する
+          </button>
+        </div>
+      )}
+
       {/* ボード */}
       <Board
         state={state}
+        selectedHeliId={selectedHeliId}
         onBuildingClick={handleBuildingClick}
         onIntersectionClick={handleIntersectionClick}
       />
-
-      {/* プログレス表示 */}
-      <div className="mt-6 text-center">
-        <div className="text-sm text-gray-600 font-semibold">
-          ヘリの操作進捗: {currentHeliIndex + 1} / 3
-        </div>
-        <div className="flex gap-2 justify-center mt-2">
-          {state.police.helicopters.map((heli) => (
-            <div
-              key={heli.id}
-              className={`w-3 h-3 rounded-full transition-all ${
-                heli.id <= currentHeliIndex + 1
-                  ? "bg-blue-600 w-4 h-4"
-                  : "bg-gray-300"
-              }`}
-            />
-          ))}
-        </div>
-      </div>
     </div>
   );
 };

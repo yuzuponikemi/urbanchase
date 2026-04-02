@@ -31,6 +31,7 @@ export interface CriminalState {
 export interface PoliceState {
   helicopters: Helicopter[]; // 3つのヘリ
   lastSearchResult: SearchResult | null;
+  actedHeliIds: (1 | 2 | 3)[]; // ターン内で行動済みのヘリID
 }
 
 // ヘリコプター（3つ、色分け）
@@ -67,6 +68,7 @@ export type GameContextType = {
   moveHelicopter: (heliId: 1 | 2 | 3, x: number, y: number) => boolean;
   searchAdjacentBuilding: (heliId: 1 | 2 | 3, bx: number, by: number) => SearchResult;
   clearSearchResult: () => void;
+  completeHeliAction: (heliId: 1 | 2 | 3) => void;
   startTurn: () => void;
 
 
