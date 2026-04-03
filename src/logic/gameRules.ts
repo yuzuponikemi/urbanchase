@@ -40,7 +40,7 @@ export function executeCriminalMove(newPos: { x: number; y: number }, state: Gam
   const isSpecial = state.round === 1 || state.round === 6;
   const color = isSpecial ? "special" : "normal";
   const newTrace: TraceMarker = {
-    round: state.round,
+    round: state.round - 1,
     location: { ...origin }, // 移動元の場所に痕跡を残す
     color,
     isRevealed: false, // 検索で見つかるまで警察からは見えない

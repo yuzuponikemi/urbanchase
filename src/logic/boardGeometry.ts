@@ -87,3 +87,16 @@ export function isAdjacentIntersection(from: { x: number; y: number }, to: { x: 
     (fy === ty && Math.abs(fx - tx) === 1)
   );
 }
+
+/**
+ * 指定した交差点に隣接する交差点のリストを取得
+ */
+export function getAdjacentIntersectionsFromIntersection(ix: number, iy: number): Array<{ x: number; y: number }> {
+    const candidates = [
+        { x: ix - 1, y: iy },
+        { x: ix + 1, y: iy },
+        { x: ix, y: iy - 1 },
+        { x: ix, y: iy + 1 },
+    ];
+    return candidates.filter(pos => isValidIntersectionPos(pos.x, pos.y));
+}

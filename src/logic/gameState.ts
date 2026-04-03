@@ -95,7 +95,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case "START_GAME": {
       const startingPos = state.criminal.hideBuilding;
       const initialTrace: TraceMarker = {
-        round: 1,
+        round: 0,
         location: { ...startingPos },
         color: "special",
         isRevealed: false,
@@ -284,8 +284,12 @@ export function useGameProvider() {
     },
 
     moveHelicopter: (heliId, x, y) => {
-      dispatch({ type: "MOVE_HELICOPTER", heliId, x, y });
-      return true;
+      const to = { x, y };
+      if (canMoveHelicopter(heliId, to, state)) {
+        dispatch({ type: "MOVE_HELICOPTER", heliId, x, y });
+        return true;
+      }
+      return false;
     },
 
     searchAdjacentBuilding: (heliId, bx, by) => {

@@ -6,7 +6,7 @@
 import React, { useState } from "react";
 import type { GameState, GameContextType } from "../logic/types";
 import { Board } from "./Board";
-import { getAdjacentBuildings } from "../logic/boardGeometry";
+import { getAdjacentBuildings, getAdjacentIntersectionsFromIntersection } from "../logic/boardGeometry";
 
 interface PoliceActionProps {
   state: GameState;
@@ -28,6 +28,12 @@ export const PoliceAction: React.FC<PoliceActionProps> = ({ state, context }) =>
   const searchableBuildings =
     actionMode === "search" && selectedHeli && selectedHeli.location.x >= 0
       ? getAdjacentBuildings(selectedHeli.location.x, selectedHeli.location.y)
+      : [];
+
+  // 移動モード時: 選択中ヘリの隣接交差点をハイライト
+  const moveableIntersections =
+    actionMode === "move" && selectedHeli && selectedHeli.location.x >= 0
+      ? getAdjacentIntersectionsFromIntersection(selectedHeli.location.x, selectedHeli.location.y)
       : [];
 
   const handleBuildingClick = (x: number, y: number) => {
@@ -54,9 +60,13 @@ export const PoliceAction: React.FC<PoliceActionProps> = ({ state, context }) =>
     }
 
     if (actionMode === "move" && selectedHeliId) {
+      // 隣接しているかチェックしてから呼ぶ（あるいは context が失敗を返す）
       const moved = context.moveHelicopter(selectedHeliId, x, y);
       if (moved) {
         completeHeliAction();
+      } else {
+        // 移動失敗（隣接していない場合など）
+        console.log("Invalid move target");
       }
     }
   };
@@ -215,6 +225,7 @@ export const PoliceAction: React.FC<PoliceActionProps> = ({ state, context }) =>
         state={state}
         selectedHeliId={selectedHeliId}
         highlightedBuildings={searchableBuildings}
+        highlightedIntersections={moveableIntersections}
         onBuildingClick={handleBuildingClick}
         onIntersectionClick={handleIntersectionClick}
       />

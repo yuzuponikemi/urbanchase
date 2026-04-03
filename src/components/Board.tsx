@@ -16,6 +16,7 @@ interface BoardProps {
   state: GameState;
   selectedHeliId?: 1 | 2 | 3 | null;
   highlightedBuildings?: Array<{ x: number; y: number }>;
+  highlightedIntersections?: Array<{ x: number; y: number }>;
   onBuildingClick: (x: number, y: number) => void;
   onIntersectionClick: (x: number, y: number) => void;
 }
@@ -26,7 +27,7 @@ const PADDING = 60;
 const CANVAS_WIDTH = (BOARD_WIDTH - 1) * CELL_SIZE + BUILDING_SIZE + PADDING * 2;
 const CANVAS_HEIGHT = (BOARD_HEIGHT - 1) * CELL_SIZE + BUILDING_SIZE + PADDING * 2;
 
-export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlightedBuildings, onBuildingClick, onIntersectionClick }) => {
+export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlightedBuildings, highlightedIntersections, onBuildingClick, onIntersectionClick }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [canvasSize, setCanvasSize] = React.useState({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT });
 
@@ -265,12 +266,16 @@ export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlighted
                 if (shouldShowCriminal) {
                     drawSportsCar(i, j, "#ef4444");
 
-                    if (state.currentPlayer === "criminal" && trace) {
+                    if (state.currentPlayer === "criminal") {
+                        // 現在のラウンド（移動回数）を表示
                         ctx.fillStyle = "#fff";
                         ctx.font = `bold ${14 * scale}px sans-serif`;
                         ctx.textAlign = "center";
                         ctx.textBaseline = "middle";
-                        ctx.fillText(String(trace.round), x + buildingSize / 2, y + buildingSize / 2 - 15 * scale);
+                        ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+                        ctx.shadowBlur = 4 * scale;
+                        ctx.fillText(String(state.round), x + buildingSize / 2, y + buildingSize / 2 - 15 * scale);
+                        ctx.shadowBlur = 0;
                     }
                 }
             }
@@ -284,10 +289,23 @@ export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlighted
             const y = padding + j * cellSize + buildingSize + (cellSize - buildingSize) / 2;
 
             // 交差点のドット（道路の中心）
-            ctx.fillStyle = "#4b5563";
-            ctx.beginPath();
-            ctx.arc(x, y, 4 * scale, 0, Math.PI * 2);
-            ctx.fill();
+            const isHighlighted = highlightedIntersections?.some(p => p.x === i && p.y === j) ?? false;
+
+            if (isHighlighted) {
+                ctx.fillStyle = "rgba(251, 191, 36, 0.6)"; // 半透明の黄色
+                ctx.beginPath();
+                ctx.arc(x, y, 15 * scale, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = "#fbbf24";
+                ctx.lineWidth = 2 * scale;
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = "#4b5563";
+                ctx.beginPath();
+                ctx.arc(x, y, 4 * scale, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     }
 
