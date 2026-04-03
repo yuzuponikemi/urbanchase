@@ -95,7 +95,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case "START_GAME": {
       const startingPos = state.criminal.hideBuilding;
       const initialTrace: TraceMarker = {
-        round: 0,
+        round: 1,
         location: { ...startingPos },
         color: "special",
         isRevealed: false,
