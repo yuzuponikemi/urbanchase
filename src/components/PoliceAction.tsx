@@ -6,6 +6,7 @@
 import React, { useState } from "react";
 import type { GameState, GameContextType } from "../logic/types";
 import { Board } from "./Board";
+import { getAdjacentBuildings } from "../logic/boardGeometry";
 
 interface PoliceActionProps {
   state: GameState;
@@ -22,6 +23,12 @@ export const PoliceAction: React.FC<PoliceActionProps> = ({ state, context }) =>
     blue: "青",
     green: "緑",
   };
+
+  // 検索モード時: 選択中ヘリの隣接建物をハイライト
+  const searchableBuildings =
+    actionMode === "search" && selectedHeli && selectedHeli.location.x >= 0
+      ? getAdjacentBuildings(selectedHeli.location.x, selectedHeli.location.y)
+      : [];
 
   const handleBuildingClick = (x: number, y: number) => {
     if (actionMode === "search" && selectedHeliId) {
@@ -207,6 +214,7 @@ export const PoliceAction: React.FC<PoliceActionProps> = ({ state, context }) =>
       <Board
         state={state}
         selectedHeliId={selectedHeliId}
+        highlightedBuildings={searchableBuildings}
         onBuildingClick={handleBuildingClick}
         onIntersectionClick={handleIntersectionClick}
       />

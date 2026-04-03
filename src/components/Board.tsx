@@ -15,6 +15,7 @@ import {
 interface BoardProps {
   state: GameState;
   selectedHeliId?: 1 | 2 | 3 | null;
+  highlightedBuildings?: Array<{ x: number; y: number }>;
   onBuildingClick: (x: number, y: number) => void;
   onIntersectionClick: (x: number, y: number) => void;
 }
@@ -24,7 +25,7 @@ const PADDING = 40;
 const CANVAS_WIDTH = BOARD_WIDTH * CELL_SIZE + PADDING * 2;
 const CANVAS_HEIGHT = BOARD_HEIGHT * CELL_SIZE + PADDING * 2;
 
-export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, onBuildingClick, onIntersectionClick }) => {
+export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlightedBuildings, onBuildingClick, onIntersectionClick }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [canvasSize, setCanvasSize] = React.useState({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT });
 
@@ -76,14 +77,26 @@ export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, onBuildingC
         const x = padding + i * cellSize;
         const y = padding + j * cellSize;
 
-        // 選択可能な建物を強調
+        // 検索可能建物のハイライト（警察の検索モード時）
+        const isSearchable = highlightedBuildings?.some((b) => b.x === i && b.y === j) ?? false;
+
+        // 選択可能な建物を強調（犯人ターン）
         const isAdjacentToCriminal =
           state.currentPlayer === "criminal" &&
           Math.abs(i - state.criminal.currentLocation.x) +
           Math.abs(j - state.criminal.currentLocation.y) ===
           1;
 
-        if (isAdjacentToCriminal) {
+        if (isSearchable) {
+          ctx.fillStyle = "#fef3c7"; // 薄い黄色
+          ctx.fillRect(x, y, cellSize, cellSize);
+          // 枠線でさらに強調
+          ctx.strokeStyle = "#f59e0b";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+          ctx.strokeStyle = "#d1d5db";
+          ctx.lineWidth = 2;
+        } else if (isAdjacentToCriminal) {
           ctx.fillStyle = "#dbeafe";
           ctx.fillRect(x, y, cellSize, cellSize);
         }
@@ -92,21 +105,33 @@ export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, onBuildingC
 
         // 痕跡マーカー
         const trace = state.traceMarkers.find((m) => m.location.x === i && m.location.y === j);
+        const isCriminalCurrentPos = state.criminal.currentLocation.x === i && state.criminal.currentLocation.y === j;
         if (trace) {
-          // 表示条件: 
-          // 1. 容疑者自身にはすべての痕跡が見える
-          // 2. 発見済み (isRevealed) の痕跡は全員に見える
-          const shouldShowTrace = state.currentPlayer === "criminal" || trace.isRevealed;
+          // 表示条件:
+          // 1. 容疑者ターン: すべての痕跡が見える（現在位置の痕跡も含む）
+          // 2. 警察ターン: isRevealed な痕跡のみ表示。ただし現在位置は隠す（位置バレ防止）
+          const shouldShowTrace =
+            state.currentPlayer === "criminal"
+              ? true
+              : trace.isRevealed && !isCriminalCurrentPos;
 
           if (shouldShowTrace) {
             ctx.fillStyle = trace.color === "special" ? "#fbbf24" : "#e5e7eb";
             ctx.fillRect(x + cellSize * 0.2, y + cellSize * 0.2, cellSize * 0.6, cellSize * 0.6);
+
+            // 犯人ターンでは痕跡にラウンド番号を表示
+            if (state.currentPlayer === "criminal") {
+              ctx.fillStyle = trace.color === "special" ? "#92400e" : "#374151";
+              ctx.font = `bold ${12 * scale}px sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(String(trace.round), x + cellSize / 2, y + cellSize / 2);
+            }
           }
         }
 
         // 容疑者の位置
-        const isCriminalPos = state.criminal.currentLocation.x === i && state.criminal.currentLocation.y === j;
-        if (isCriminalPos) {
+        if (isCriminalCurrentPos) {
           // 表示条件: 
           // 1. 容疑者ターンの時
           // 2. セットアップ中 (setup_criminal_building)
