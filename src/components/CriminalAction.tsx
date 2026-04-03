@@ -6,7 +6,7 @@
 import React from "react";
 import type { GameState, GameContextType } from "../logic/types";
 import { Board } from "./Board";
-import { isAdjacentBuilding } from "../logic/boardGeometry";
+import { canCriminalMove } from "../logic/gameRules";
 
 interface CriminalActionProps {
   state: GameState;
@@ -17,16 +17,9 @@ export const CriminalAction: React.FC<CriminalActionProps> = ({ state, context }
   const currentLoc = state.criminal.currentLocation;
 
   const handleBuildingClick = (x: number, y: number) => {
-    // 隣接建物か確認
-    if (
-      isAdjacentBuilding(currentLoc, { x, y }) &&
-      // 前ラウンドの痕跡に移動しない
-      !(
-        state.round > 1 &&
-        state.traceMarkers.find((m) => m.round === state.round - 1)?.location.x === x &&
-        state.traceMarkers.find((m) => m.round === state.round - 1)?.location.y === y
-      )
-    ) {
+    // 共通のルールエンジンで移動可能かチェック
+    const to = { x, y };
+    if (canCriminalMove(currentLoc, to, state)) {
       context.moveCriminal(x, y);
       context.nextTurn();
     }

@@ -36,11 +36,12 @@ export function canCriminalMove(
  * 容疑者が移動を実行
  */
 export function executeCriminalMove(newPos: { x: number; y: number }, state: GameState): GameState {
+  const origin = state.criminal.currentLocation;
   const isSpecial = state.round === 1 || state.round === 6;
   const color = isSpecial ? "special" : "normal";
   const newTrace: TraceMarker = {
     round: state.round,
-    location: { ...newPos },
+    location: { ...origin }, // 移動元の場所に痕跡を残す
     color,
     isRevealed: false, // 検索で見つかるまで警察からは見えない
   };
