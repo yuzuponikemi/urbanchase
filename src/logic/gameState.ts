@@ -14,7 +14,7 @@ import {
 import { isValidIntersectionPos, isValidBuildingPos } from "./boardGeometry";
 
 const initialGameState: GameState = {
-  phase: "setup_police_heli",
+  phase: "mode_select",
   round: 1,
   board: {},
   currentPlayer: "police",
@@ -35,9 +35,12 @@ const initialGameState: GameState = {
   traceMarkers: [],
   isTurnTransition: false,
   winner: null,
+  gameMode: "human_vs_human",
+  aiDifficulty: "medium",
 };
 
 type GameAction =
+  | { type: "SET_GAME_MODE"; gameMode: "human_vs_human" | "human_vs_ai"; difficulty?: "easy" | "medium" | "hard" }
   | { type: "PLACE_HELICOPTER"; heliId: 1 | 2 | 3; x: number; y: number }
   | { type: "SET_CRIMINAL_HIDE_BUILDING"; x: number; y: number }
   | { type: "START_GAME" }
@@ -52,6 +55,35 @@ type GameAction =
 
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
+    case "SET_GAME_MODE": {
+      return {
+        ...state,
+        phase: "setup_police_heli",
+        gameMode: action.gameMode,
+        aiDifficulty: action.difficulty || "medium",
+        // リセット
+        round: 1,
+        currentPlayer: "police",
+        criminal: {
+          hideBuilding: { x: -1, y: -1 },
+          currentLocation: { x: -1, y: -1 },
+          isDiscovered: false,
+        },
+        police: {
+          helicopters: [
+            { id: 1, color: "red", location: { x: -1, y: -1 } },
+            { id: 2, color: "blue", location: { x: -1, y: -1 } },
+            { id: 3, color: "green", location: { x: -1, y: -1 } },
+          ],
+          lastSearchResult: null,
+          actedHeliIds: [],
+        },
+        traceMarkers: [],
+        isTurnTransition: false,
+        winner: null,
+      };
+    }
+
     case "PLACE_HELICOPTER": {
       if (!isValidIntersectionPos(action.x, action.y)) return state;
 
@@ -265,6 +297,10 @@ export function useGameProvider() {
 
   const contextValue: GameContextType = {
     state,
+
+    setGameMode: (gameMode, difficulty) => {
+      dispatch({ type: "SET_GAME_MODE", gameMode, difficulty });
+    },
 
     placeHelicopter: (heliId, x, y) => {
       dispatch({ type: "PLACE_HELICOPTER", heliId, x, y });
