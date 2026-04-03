@@ -20,10 +20,11 @@ interface BoardProps {
   onIntersectionClick: (x: number, y: number) => void;
 }
 
-const CELL_SIZE = 50; // ピクセル
-const PADDING = 40;
-const CANVAS_WIDTH = BOARD_WIDTH * CELL_SIZE + PADDING * 2;
-const CANVAS_HEIGHT = BOARD_HEIGHT * CELL_SIZE + PADDING * 2;
+const CELL_SIZE = 100; // マスの間隔
+const BUILDING_SIZE = 70; // 建物のサイズ
+const PADDING = 60;
+const CANVAS_WIDTH = (BOARD_WIDTH - 1) * CELL_SIZE + BUILDING_SIZE + PADDING * 2;
+const CANVAS_HEIGHT = (BOARD_HEIGHT - 1) * CELL_SIZE + BUILDING_SIZE + PADDING * 2;
 
 export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlightedBuildings, onBuildingClick, onIntersectionClick }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -62,156 +63,245 @@ export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlighted
 
     const scale = canvasSize.width / CANVAS_WIDTH;
     const cellSize = CELL_SIZE * scale;
+    const buildingSize = BUILDING_SIZE * scale;
     const padding = PADDING * scale;
 
-    // 背景
-    ctx.fillStyle = "#f9fafb";
+    // 背景（道路の色）
+    ctx.fillStyle = "#1f2937"; // Asphalt grey
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 道路の白線（グリッド状）
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.setLineDash([10 * scale, 10 * scale]);
+    ctx.lineWidth = 2 * scale;
+
+    // 縦の線
+    for (let i = 0; i < BOARD_WIDTH - 1; i++) {
+        const x = padding + i * cellSize + buildingSize + (cellSize - buildingSize) / 2;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    // 横の線
+    for (let j = 0; j < BOARD_HEIGHT - 1; j++) {
+        const y = padding + j * cellSize + buildingSize + (cellSize - buildingSize) / 2;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    const drawBuilding = (bx: number, by: number, highlightColor?: string, strokeColor?: string) => {
+        const x = padding + bx * cellSize;
+        const y = padding + by * cellSize;
+
+        // 建物の影
+        ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.fillRect(x + 4 * scale, y + 4 * scale, buildingSize, buildingSize);
+
+        // 建物本体
+        ctx.fillStyle = highlightColor || "#4b5563";
+        ctx.fillRect(x, y, buildingSize, buildingSize);
+
+        if (strokeColor) {
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 3 * scale;
+            ctx.strokeRect(x, y, buildingSize, buildingSize);
+        }
+
+        // 窓の描画
+        ctx.fillStyle = "rgba(255, 255, 0, 0.4)";
+        const winSize = buildingSize / 6;
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+                if ((bx + by + row + col) % 3 === 0) {
+                    ctx.fillRect(
+                        x + winSize + col * winSize * 1.8,
+                        y + winSize + row * winSize * 1.8,
+                        winSize,
+                        winSize
+                    );
+                }
+            }
+        }
+    };
+
+    const drawSportsCar = (cx: number, cy: number, color: string) => {
+        const x = padding + cx * cellSize + buildingSize / 2;
+        const y = padding + cy * cellSize + buildingSize / 2;
+        const carW = 35 * scale;
+        const carH = 20 * scale;
+
+        ctx.save();
+        ctx.translate(x, y);
+
+        // 車体
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(-carW / 2, -carH / 2, carW, carH, 4 * scale);
+        ctx.fill();
+
+        // 屋根
+        ctx.fillStyle = "#111827";
+        ctx.beginPath();
+        ctx.roundRect(-carW / 4, -carH / 3, carW / 2, carH * 0.66, 2 * scale);
+        ctx.fill();
+
+        // ライト
+        ctx.fillStyle = "#fbbf24";
+        ctx.fillRect(carW / 2 - 4 * scale, -carH / 2 + 2 * scale, 3 * scale, 3 * scale);
+        ctx.fillRect(carW / 2 - 4 * scale, carH / 2 - 5 * scale, 3 * scale, 3 * scale);
+
+        ctx.restore();
+    };
+
+    const drawHeli = (ix: number, iy: number, baseColor: string, isActed: boolean, isSelected: boolean) => {
+        const x = padding + ix * cellSize + buildingSize + (cellSize - buildingSize) / 2;
+        const y = padding + iy * cellSize + buildingSize + (cellSize - buildingSize) / 2;
+        const size = 20 * scale;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.globalAlpha = isActed ? 0.4 : 1.0;
+
+        if (isSelected) {
+            ctx.shadowBlur = 15 * scale;
+            ctx.shadowColor = "#fbbf24";
+            ctx.strokeStyle = "#fbbf24";
+            ctx.lineWidth = 3 * scale;
+            ctx.beginPath();
+            ctx.arc(0, 0, size * 1.5, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        // ヘリ本体
+        ctx.fillStyle = baseColor;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size, size * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 尾翼
+        ctx.fillRect(-size * 1.4, -size * 0.1, size, size * 0.2);
+        ctx.fillRect(-size * 1.4, -size * 0.3, size * 0.2, size * 0.6);
+
+        // ローター（動いている感じの線）
+        ctx.strokeStyle = "#9ca3af";
+        ctx.lineWidth = 2 * scale;
+        ctx.beginPath();
+        ctx.moveTo(-size * 1.2, 0);
+        ctx.lineTo(size * 1.2, 0);
+        ctx.moveTo(0, -size * 1.2);
+        ctx.lineTo(0, size * 1.2);
+        ctx.stroke();
+
+        ctx.restore();
+    };
 
     // 建物マス（5x5）
     ctx.strokeStyle = "#d1d5db";
     ctx.lineWidth = 2;
 
     for (let i = 0; i < BOARD_WIDTH; i++) {
-      for (let j = 0; j < BOARD_HEIGHT; j++) {
-        const x = padding + i * cellSize;
-        const y = padding + j * cellSize;
+        for (let j = 0; j < BOARD_HEIGHT; j++) {
+            // 検索可能建物のハイライト
+            const isSearchable = highlightedBuildings?.some((b) => b.x === i && b.y === j) ?? false;
 
-        // 検索可能建物のハイライト（警察の検索モード時）
-        const isSearchable = highlightedBuildings?.some((b) => b.x === i && b.y === j) ?? false;
+            // 選択可能な建物を強調（犯人ターン）
+            const isAdjacentToCriminal =
+                state.currentPlayer === "criminal" &&
+                Math.abs(i - state.criminal.currentLocation.x) +
+                Math.abs(j - state.criminal.currentLocation.y) ===
+                1;
 
-        // 選択可能な建物を強調（犯人ターン）
-        const isAdjacentToCriminal =
-          state.currentPlayer === "criminal" &&
-          Math.abs(i - state.criminal.currentLocation.x) +
-          Math.abs(j - state.criminal.currentLocation.y) ===
-          1;
+            let bgColor: string | undefined = undefined;
+            let strokeColor: string | undefined = undefined;
 
-        if (isSearchable) {
-          ctx.fillStyle = "#fef3c7"; // 薄い黄色
-          ctx.fillRect(x, y, cellSize, cellSize);
-          // 枠線でさらに強調
-          ctx.strokeStyle = "#f59e0b";
-          ctx.lineWidth = 3;
-          ctx.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
-          ctx.strokeStyle = "#d1d5db";
-          ctx.lineWidth = 2;
-        } else if (isAdjacentToCriminal) {
-          ctx.fillStyle = "#dbeafe";
-          ctx.fillRect(x, y, cellSize, cellSize);
-        }
-
-        ctx.strokeRect(x, y, cellSize, cellSize);
-
-        // 痕跡マーカー
-        const trace = state.traceMarkers.find((m) => m.location.x === i && m.location.y === j);
-        const isCriminalCurrentPos = state.criminal.currentLocation.x === i && state.criminal.currentLocation.y === j;
-        if (trace) {
-          // 表示条件:
-          // 1. 容疑者ターン: すべての痕跡が見える
-          // 2. 警察ターン: isRevealed (検索済み) の痕跡のみ見える
-          const shouldShowTrace = state.currentPlayer === "criminal" || trace.isRevealed;
-
-          if (shouldShowTrace) {
-            ctx.fillStyle = trace.color === "special" ? "#fbbf24" : "#e5e7eb";
-            ctx.fillRect(x + cellSize * 0.2, y + cellSize * 0.2, cellSize * 0.6, cellSize * 0.6);
-
-            // 凡人（容疑者）ターン: 現在位置以外の痕跡にラウンド番号を描画
-            if (state.currentPlayer === "criminal" && !isCriminalCurrentPos) {
-              ctx.fillStyle = trace.color === "special" ? "#92400e" : "#374151";
-              ctx.font = `bold ${12 * scale}px sans-serif`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText(String(trace.round), x + cellSize / 2, y + cellSize / 2);
+            if (isSearchable) {
+                bgColor = "#78350f"; // 暗い黄色/茶色
+                strokeColor = "#fbbf24";
+            } else if (isAdjacentToCriminal) {
+                bgColor = "#1e3a8a"; // 暗い青
             }
-          }
-        }
 
-        // 容疑者の位置
-        if (isCriminalCurrentPos) {
-          // 表示条件: 
-          // 1. 容疑者ターンの時
-          // 2. セットアップ中 (setup_criminal_building)
-          // 3. 警察に見つかった時 (isDiscovered)
-          // 4. ゲームオーバーの時
-          const shouldShowCriminal =
-            state.currentPlayer === "criminal" ||
-            state.phase === "setup_criminal_building" ||
-            state.criminal.isDiscovered ||
-            state.phase === "gameover";
+            drawBuilding(i, j, bgColor, strokeColor);
 
-          if (shouldShowCriminal) {
-            ctx.fillStyle = "#ef4444";
-            ctx.beginPath();
-            ctx.arc(x + cellSize / 2, y + cellSize / 2, cellSize * 0.25, 0, Math.PI * 2);
-            ctx.fill();
+            const x = padding + i * cellSize;
+            const y = padding + j * cellSize;
 
-            // 犯人ターン: 現在位置の痕跡ラウンド番号を赤丸の上に表示
-            if (state.currentPlayer === "criminal" && trace) {
-              ctx.fillStyle = "#fff";
-              ctx.font = `bold ${11 * scale}px sans-serif`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillText(String(trace.round), x + cellSize / 2, y + cellSize / 2);
+            // 痕跡マーカー
+            const trace = state.traceMarkers.find((m) => m.location.x === i && m.location.y === j);
+            const isCriminalCurrentPos = state.criminal.currentLocation.x === i && state.criminal.currentLocation.y === j;
+            if (trace) {
+                const shouldShowTrace = state.currentPlayer === "criminal" || trace.isRevealed;
+
+                if (shouldShowTrace) {
+                    ctx.fillStyle = trace.color === "special" ? "#fbbf24" : "rgba(255, 255, 255, 0.4)";
+                    // 小さな丸または番号
+                    ctx.beginPath();
+                    ctx.arc(x + buildingSize / 2, y + buildingSize / 2, buildingSize * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    if (state.currentPlayer === "criminal" && !isCriminalCurrentPos) {
+                        ctx.fillStyle = "#000";
+                        ctx.font = `bold ${14 * scale}px sans-serif`;
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText(String(trace.round), x + buildingSize / 2, y + buildingSize / 2);
+                    }
+                }
             }
-          }
+
+            // 容疑者の位置
+            if (isCriminalCurrentPos) {
+                const shouldShowCriminal =
+                    state.currentPlayer === "criminal" ||
+                    state.phase === "setup_criminal_building" ||
+                    state.criminal.isDiscovered ||
+                    state.phase === "gameover";
+
+                if (shouldShowCriminal) {
+                    drawSportsCar(i, j, "#ef4444");
+
+                    if (state.currentPlayer === "criminal" && trace) {
+                        ctx.fillStyle = "#fff";
+                        ctx.font = `bold ${14 * scale}px sans-serif`;
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText(String(trace.round), x + buildingSize / 2, y + buildingSize / 2 - 15 * scale);
+                    }
+                }
+            }
         }
-      }
     }
 
-    // 交差点（4x4）
-    ctx.fillStyle = "#6b7280";
+    // 交差点（4x4）とヘリコプター
     for (let i = 0; i < INTERSECTION_WIDTH; i++) {
-      for (let j = 0; j < INTERSECTION_HEIGHT; j++) {
-        const x = padding + cellSize * (i + 1);
-        const y = padding + cellSize * (j + 1);
+        for (let j = 0; j < INTERSECTION_HEIGHT; j++) {
+            const x = padding + i * cellSize + buildingSize + (cellSize - buildingSize) / 2;
+            const y = padding + j * cellSize + buildingSize + (cellSize - buildingSize) / 2;
 
-        ctx.beginPath();
-        ctx.arc(x, y, 5 * scale, 0, Math.PI * 2);
-        ctx.fill();
-      }
+            // 交差点のドット（道路の中心）
+            ctx.fillStyle = "#4b5563";
+            ctx.beginPath();
+            ctx.arc(x, y, 4 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
-    // ヘリコプター
     const heliColors: Record<string, string> = {
-      red: "#ef4444",
-      blue: "#3b82f6",
-      green: "#10b981",
+        red: "#ef4444",
+        blue: "#3b82f6",
+        green: "#10b981",
     };
 
     for (const heli of state.police.helicopters) {
-      if (heli.location.x < 0 || heli.location.y < 0) continue;
-      const x = padding + cellSize * (heli.location.x + 1);
-      const y = padding + cellSize * (heli.location.y + 1);
-
-      const isActed = state.police.actedHeliIds.includes(heli.id);
-      const isSelected = selectedHeliId === heli.id;
-
-      // 行動済みは半透明に
-      ctx.globalAlpha = isActed ? 0.4 : 1.0;
-      
-      // 選択中を強調
-      if (isSelected) {
-        ctx.strokeStyle = "#fbbf24"; // ゴールド
-        ctx.lineWidth = 4 * scale;
-        ctx.beginPath();
-        ctx.arc(x, y, 16 * scale, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
-      ctx.fillStyle = heliColors[heli.color] || "#6b7280";
-      ctx.beginPath();
-      ctx.arc(x, y, 12 * scale, 0, Math.PI * 2);
-      ctx.fill();
-
-      // ヘリ ID
-      ctx.fillStyle = "#fff";
-      ctx.font = `bold ${14 * scale}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(String(heli.id), x, y);
-      
-      ctx.globalAlpha = 1.0;
+        if (heli.location.x < 0 || heli.location.y < 0) continue;
+        const isActed = state.police.actedHeliIds.includes(heli.id);
+        const isSelected = selectedHeliId === heli.id;
+        drawHeli(heli.location.x, heli.location.y, heliColors[heli.color] || "#6b7280", isActed, isSelected);
     }
   };
 
@@ -237,29 +327,35 @@ export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlighted
 
     const scale = canvasSize.width / CANVAS_WIDTH;
     const cellSize = CELL_SIZE * scale;
+    const buildingSize = BUILDING_SIZE * scale;
     const padding = PADDING * scale;
 
     // 交差点クリック判定（建物より優先）
     for (let i = 0; i < INTERSECTION_WIDTH; i++) {
-      for (let j = 0; j < INTERSECTION_HEIGHT; j++) {
-        const ix = padding + cellSize * (i + 1);
-        const iy = padding + cellSize * (j + 1);
-        const distance = Math.sqrt((x - ix) ** 2 + (y - iy) ** 2);
+        for (let j = 0; j < INTERSECTION_HEIGHT; j++) {
+            const ix = padding + i * cellSize + buildingSize + (cellSize - buildingSize) / 2;
+            const iy = padding + j * cellSize + buildingSize + (cellSize - buildingSize) / 2;
+            const distance = Math.sqrt((x - ix) ** 2 + (y - iy) ** 2);
 
-        if (distance < 20 * scale) { // 判定を少し広く
-          onIntersectionClick(i, j);
-          return;
+            if (distance < 25 * scale) {
+                onIntersectionClick(i, j);
+                return;
+            }
         }
-      }
     }
 
     // 建物クリック判定
-    const buildingX = Math.floor((x - padding) / cellSize);
-    const buildingY = Math.floor((y - padding) / cellSize);
+    const bx = Math.floor((x - padding) / cellSize);
+    const by = Math.floor((y - padding) / cellSize);
 
-    if (buildingX >= 0 && buildingX < BOARD_WIDTH && buildingY >= 0 && buildingY < BOARD_HEIGHT) {
-      onBuildingClick(buildingX, buildingY);
-      return;
+    if (bx >= 0 && bx < BOARD_WIDTH && by >= 0 && by < BOARD_HEIGHT) {
+        // 建物矩形内かどうかを厳密にチェック
+        const localX = (x - padding) % cellSize;
+        const localY = (y - padding) % cellSize;
+        if (localX <= buildingSize && localY <= buildingSize) {
+            onBuildingClick(bx, by);
+            return;
+        }
     }
   };
 

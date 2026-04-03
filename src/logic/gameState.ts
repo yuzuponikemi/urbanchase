@@ -3,7 +3,7 @@
  */
 
 import { createContext, useContext, useReducer } from "react";
-import type { GameState, GameContextType } from "./types";
+import type { GameState, GameContextType, TraceMarker } from "./types";
 import {
   canCriminalMove,
   executeCriminalMove,
@@ -93,11 +93,19 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "START_GAME": {
+      const startingPos = state.criminal.hideBuilding;
+      const initialTrace: TraceMarker = {
+        round: 1,
+        location: { ...startingPos },
+        color: "special",
+        isRevealed: false,
+      };
       return {
         ...state,
         phase: "playing",
         round: 1,
-        currentPlayer: "criminal",
+        currentPlayer: "police",
+        traceMarkers: [initialTrace],
         isTurnTransition: true,
       };
     }
