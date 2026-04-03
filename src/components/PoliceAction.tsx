@@ -205,12 +205,12 @@ export const PoliceAction: React.FC<PoliceActionProps> = ({ state, context }) =>
 
         {/* 確認ダイアログ (オーバーレイ) */}
         {pendingAction && (
-          <div 
+          <div
             className="absolute z-50 pointer-events-none"
-            style={{ 
-              left: `${pendingAction.pxX}px`, 
+            style={{
+              left: `${pendingAction.pxX}px`,
               top: `${pendingAction.pxY}px`,
-              transform: 'translate(-50%, -120%)' 
+              transform: 'translate(-50%, -110%)'
             }}
           >
             <div className="pointer-events-auto bg-white border-2 border-blue-500 rounded-lg shadow-2xl p-2 flex flex-col items-center gap-2 animate-in slide-in-from-bottom-2 duration-200 min-w-[140px]">
