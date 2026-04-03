@@ -17,8 +17,8 @@ interface BoardProps {
   selectedHeliId?: 1 | 2 | 3 | null;
   highlightedBuildings?: Array<{ x: number; y: number }>;
   highlightedIntersections?: Array<{ x: number; y: number }>;
-  onBuildingClick: (x: number, y: number) => void;
-  onIntersectionClick: (x: number, y: number) => void;
+  onBuildingClick: (x: number, y: number, pxX: number, pxY: number) => void;
+  onIntersectionClick: (x: number, y: number, pxX: number, pxY: number) => void;
 }
 
 const CELL_SIZE = 100; // マスの間隔
@@ -356,7 +356,7 @@ export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlighted
             const distance = Math.sqrt((x - ix) ** 2 + (y - iy) ** 2);
 
             if (distance < 25 * scale) {
-                onIntersectionClick(i, j);
+                onIntersectionClick(i, j, x, y);
                 return;
             }
         }
@@ -371,7 +371,7 @@ export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlighted
         const localX = (x - padding) % cellSize;
         const localY = (y - padding) % cellSize;
         if (localX <= buildingSize && localY <= buildingSize) {
-            onBuildingClick(bx, by);
+            onBuildingClick(bx, by, x, y);
             return;
         }
     }
