@@ -6,9 +6,7 @@ import type { GameState, TraceMarker, SearchResult } from "./types";
 import {
   isAdjacentBuilding,
   isAdjacentIntersection,
-  isValidBuildingPos,
   isValidIntersectionPos,
-  getAdjacentIntersections,
   getAdjacentBuildings,
 } from "./boardGeometry";
 
@@ -131,45 +129,10 @@ export function checkWinCondition(state: GameState): "criminal_win" | "police_wi
     return "police_win";
   }
 
-  // 容疑者が追い詰められた（全隣接建物がヘリで塞がれている）
-  if (canCriminalBeBoxed(state)) {
-    return "police_win";
-  }
-
   // 容疑者が11ラウンド逃げ切った
   if (state.round > 11) {
     return "criminal_win";
   }
 
   return null;
-}
-
-/**
- * 容疑者が追い詰められているか判定
- */
-export function canCriminalBeBoxed(state: GameState): boolean {
-  const { x: cx, y: cy } = state.criminal.currentLocation;
-  const adjacentBuildings = [
-    { x: cx - 1, y: cy },
-    { x: cx + 1, y: cy },
-    { x: cx, y: cy - 1 },
-    { x: cx, y: cy + 1 },
-  ].filter(({ x, y }) => isValidBuildingPos(x, y));
-
-  if (adjacentBuildings.length === 0) {
-    return true; // 隣接建物がない = 追い詰められた
-  }
-
-  // すべての隣接建物がヘリで塞がれているか確認
-  for (const building of adjacentBuildings) {
-    const adjacentIntersections = getAdjacentIntersections(building.x, building.y);
-    const hasHeli = state.police.helicopters.some((heli) =>
-      adjacentIntersections.some((inter) => inter.x === heli.location.x && inter.y === heli.location.y)
-    );
-    if (!hasHeli) {
-      return false; // この建物に到達できる = 逃げられる
-    }
-  }
-
-  return true; // すべて塞がれている
 }
