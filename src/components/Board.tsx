@@ -108,19 +108,16 @@ export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlighted
         const isCriminalCurrentPos = state.criminal.currentLocation.x === i && state.criminal.currentLocation.y === j;
         if (trace) {
           // 表示条件:
-          // 1. 容疑者ターン: すべての痕跡が見える（現在位置の痕跡も含む）
-          // 2. 警察ターン: isRevealed な痕跡のみ表示。ただし現在位置は隠す（位置バレ防止）
-          const shouldShowTrace =
-            state.currentPlayer === "criminal"
-              ? true
-              : trace.isRevealed && !isCriminalCurrentPos;
+          // 1. 容疑者ターン: すべての痕跡が見える
+          // 2. 警察ターン: isRevealed (検索済み) の痕跡のみ見える
+          const shouldShowTrace = state.currentPlayer === "criminal" || trace.isRevealed;
 
           if (shouldShowTrace) {
             ctx.fillStyle = trace.color === "special" ? "#fbbf24" : "#e5e7eb";
             ctx.fillRect(x + cellSize * 0.2, y + cellSize * 0.2, cellSize * 0.6, cellSize * 0.6);
 
-            // 犯人ターンでは痕跡にラウンド番号を表示
-            if (state.currentPlayer === "criminal") {
+            // 凡人（容疑者）ターン: 現在位置以外の痕跡にラウンド番号を描画
+            if (state.currentPlayer === "criminal" && !isCriminalCurrentPos) {
               ctx.fillStyle = trace.color === "special" ? "#92400e" : "#374151";
               ctx.font = `bold ${12 * scale}px sans-serif`;
               ctx.textAlign = "center";
@@ -148,6 +145,15 @@ export const Board: React.FC<BoardProps> = ({ state, selectedHeliId, highlighted
             ctx.beginPath();
             ctx.arc(x + cellSize / 2, y + cellSize / 2, cellSize * 0.25, 0, Math.PI * 2);
             ctx.fill();
+
+            // 犯人ターン: 現在位置の痕跡ラウンド番号を赤丸の上に表示
+            if (state.currentPlayer === "criminal" && trace) {
+              ctx.fillStyle = "#fff";
+              ctx.font = `bold ${11 * scale}px sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(String(trace.round), x + cellSize / 2, y + cellSize / 2);
+            }
           }
         }
       }

@@ -44,7 +44,7 @@ export function executeCriminalMove(newPos: { x: number; y: number }, state: Gam
     round: state.round,
     location: { ...newPos },
     color,
-    isRevealed: isSpecial,
+    isRevealed: false, // 検索で見つかるまで警察からは見えない
   };
 
   return {
