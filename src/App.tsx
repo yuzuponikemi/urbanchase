@@ -3,9 +3,11 @@
  */
 
 import { GameContext, useGameProvider } from "./logic/gameState";
+import { ModeSelect } from "./components/ModeSelect";
 import { SetupPhase } from "./components/SetupPhase";
 import { GameStatus } from "./components/GameStatus";
 import { CriminalAction } from "./components/CriminalAction";
+import { CriminalAITurn } from "./components/CriminalAITurn";
 import { PoliceAction } from "./components/PoliceAction";
 import { TurnTransition } from "./components/TurnTransition";
 import "./App.css";
@@ -23,14 +25,20 @@ function App() {
             🏙️ City Chase
           </h1>
           <p className="text-gray-400">
+            {state.phase === "mode_select" && "ゲームモードを選択してください"}
             {state.phase === "setup_police_heli" && "警察がヘリを配置しています..."}
             {state.phase === "setup_criminal_building" && "容疑者が隠れる建物を選択しています..."}
-            {state.phase === "playing" && `ラウンド ${state.round} / 11`}
+            {state.phase === "playing" && `ラウンド ${state.round} / 11 ${state.gameMode === "human_vs_ai" ? `(AI - ${state.aiDifficulty})` : ""}`}
             {state.phase === "gameover" && "ゲーム終了"}
           </p>
         </header>
 
         <div className="max-w-4xl mx-auto">
+          {/* モード選択フェーズ */}
+          {state.phase === "mode_select" && (
+            <ModeSelect context={gameContext} />
+          )}
+
           {/* セットアップフェーズ */}
           {(state.phase === "setup_police_heli" || state.phase === "setup_criminal_building") && (
             <SetupPhase state={state} context={gameContext} />
@@ -46,7 +54,13 @@ function App() {
                   <GameStatus state={state} context={gameContext} />
 
                   {state.currentPlayer === "criminal" && (
-                    <CriminalAction state={state} context={gameContext} />
+                    <>
+                      {state.gameMode === "human_vs_ai" ? (
+                        <CriminalAITurn state={state} context={gameContext} />
+                      ) : (
+                        <CriminalAction state={state} context={gameContext} />
+                      )}
+                    </>
                   )}
 
                   {state.currentPlayer === "police" && (

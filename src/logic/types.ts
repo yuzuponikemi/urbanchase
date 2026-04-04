@@ -4,7 +4,7 @@
 
 // ゲーム全体の状態
 export interface GameState {
-  phase: "setup_police_heli" | "setup_criminal_building" | "playing" | "gameover";
+  phase: "mode_select" | "setup_police_heli" | "setup_criminal_building" | "playing" | "gameover";
   round: number; // 1-11
   board: Board;
   currentPlayer: "criminal" | "police"; // ターン制
@@ -13,6 +13,8 @@ export interface GameState {
   traceMarkers: TraceMarker[]; // 配置した痕跡
   isTurnTransition: boolean;
   winner: "criminal_win" | "police_win" | null;
+  gameMode: "human_vs_human" | "human_vs_ai"; // ゲームモード
+  aiDifficulty: "easy" | "medium" | "hard"; // AI難易度
 }
 
 // ボード（5x5建物 + 4x4交差点）
@@ -55,6 +57,9 @@ export type SearchResult = "nothing" | "trace" | "found" | "no_building";
 // Game Context のメソッド型
 export type GameContextType = {
   state: GameState;
+
+  // ゲームモード選択
+  setGameMode: (gameMode: "human_vs_human" | "human_vs_ai", difficulty?: "easy" | "medium" | "hard") => void;
 
   // セットアップ
   placeHelicopter: (heliId: 1 | 2 | 3, x: number, y: number) => void;
